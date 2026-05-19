@@ -539,6 +539,7 @@ When photography is used (rare — mostly testimonials), avatars crop to perfect
 - Don't use Inter for display headlines. The serif character is the brand voice.
 - Don't repeat the same surface mode in two consecutive bands. The pacing alternates: cream → cream-card → dark-mockup → cream → coral-callout → dark-footer.
 - Don't add hover state styling beyond what the system already encodes — primary darkens on press; nothing else changes.
+- Don't place a component on a surface that shares the same backgroundColor token. The 1px hairline border is decorative — never the sole delineator between a component and its container.
 
 ## Responsive Behavior
 
