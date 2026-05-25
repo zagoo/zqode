@@ -128,39 +128,91 @@ Non-negotiables:
 Before reporting done, output a checklist confirming each rule above.
 If any rule was bent (and why), flag it explicitly. Don't hide deviations.
 
-## Rule 7. Use the model only for judgment calls
+## Rule 7. Before writing any UI for this SPA, conform to the layout system specified in this rule.
+This rule governs STRUCTURE and COMPONENT COMPOSITION only — visual tokens (colors, type, radii, and surface tones, etc.) continue to come from Rule 6 / DESIGN.md.Treat these as hard rules — not defaults to override.
+
+App-shell structure (non-negotiable):
+1. Three-pane shell: left nav (~256px) | center content (fluid) | right config
+   panel (~360px). Left and right panels collapse independently; center reflows.
+   There is NO top app bar spanning the panes.
+2. Routing changes the center pane only. Pages never render their own shell.
+3. Build one `<AppShell>` with named slots: `nav-header`, `nav-primary`,
+   `nav-footer`, `content-toolbar`, `content`, `content-footer`, `panel-header`,
+   `panel-body`. Every page mounts into these slots.
+
+Left sidebar (non-negotiable):
+4. Top → bottom order: product header (name + workspace switcher) → primary nav
+   → spacer → utility links (e.g.,Search, What's new, Settings, etc.) → user identity chip.
+5. Primary nav rows are icon + label. Parents expand INLINE to reveal children
+   — no flyouts, no separate routes for hub pages. Selected state is a soft
+   rounded fill on the row, never a side border.
+
+Center pane (non-negotiable):
+6. Toolbar: left cluster = sidebar-collapse button + page title; right cluster
+   = contextual icon actions (e.g.,share, fullscreen, add, etc.). No tabs here.
+7. Page heading is large display text per DESIGN.md. Mode toggles (e.g.,
+   Models / Agents) use a right-aligned segmented pill placed in the content
+   next to the heading, never in the toolbar.
+8. Card grids: 3 cols at desktop, 2 at tablet, 1 at mobile. Each card composes:
+   tinted square icon (~32px) top-left → title → description. Use card surface
+   tokens from DESIGN.md.
+9. The Center panel dynamically renders the actual content of the corresponding page 
+   according to the item clicked in the Primary Navigation area on the Left sidebar.
+
+Right configuration panel (non-negotiable):
+10. Header: panel title + utility actions + close (×).
+11. Body is a vertical stack of collapsible labeled sections. Inside a section:
+    label above the control, control fills width, toggle rows have the label
+    filling the row and the switch right-aligned.
+12. The panel pushes content; it never overlays. On narrow viewports it
+    becomes a slide-over with backdrop.
+
+Component composition (non-negotiable):
+13. Reuse a single set of primitives: `<NavItem>`, `<ToolbarIconButton>`,
+    `<SegmentedControl>`, `<SettingsSection>`, `<ToggleRow>`, `<DropdownRow>`,
+    `<ContentCard>`, `<PromptComposer>`. Do not fork — extend via props/slots.
+14. One icon family, outline style. 16px in nav/toolbars, 20px in content.
+    Never mix icon families.
+
+Before reporting done, output a checklist confirming each rule above. For
+every page or component added, state: (a) which AppShell slots it fills,
+(b) which primitives it reuses, (c) any new primitive introduced and why an
+existing one could not be extended. If a rule was bent, flag it explicitly.
+Don't hide deviations.
+
+## Rule 8. Use the model only for judgment calls
 Use me for: classification, drafting, summarization, extraction.
 Do NOT use me for: routing, retries, deterministic transforms.
 If code can answer, code answers.
 
-## Rule 8. Token budgets are not advisory
+## Rule 9. Token budgets are not advisory
 Per-task: 4,000 tokens. Per-session: 30,000 tokens.
 If approaching budget, summarize and start fresh.
 Surface the breach. Do not silently overrun.
 
-## Rule 9. Surface conflicts, don't average them
+## Rule 10. Surface conflicts, don't average them
 If two patterns contradict, pick one (more recent / more tested).
 Explain why. Flag the other for cleanup.
 Don't blend conflicting patterns.
 
-## Rule 10. Read before you write
+## Rule 11. Read before you write
 Before adding code, read exports, immediate callers, shared utilities.
 "Looks orthogonal" is dangerous. If unsure why code is structured a way, ask.
 
-## Rule 11. Tests verify intent, not just behavior
+## Rule 12. Tests verify intent, not just behavior
 Tests must encode WHY behavior matters, not just WHAT it does.
 A test that can't fail when business logic changes is wrong.
 
-## Rule 12. Checkpoint after every significant step
+## Rule 13. Checkpoint after every significant step
 Summarize what was done, what's verified, what's left.
 Don't continue from a state you can't describe back.
 If you lose track, stop and restate.
 
-## Rule 13. Match the codebase's conventions, even if you disagree
+## Rule 14. Match the codebase's conventions, even if you disagree
 Conformance > taste inside the codebase.
 If you genuinely think a convention is harmful, surface it. Don't fork silently.
 
-## Rule 14. Fail loud
+## Rule 15. Fail loud
 "Completed" is wrong if anything was skipped silently.
 "Tests pass" is wrong if any were skipped.
 Default to surfacing uncertainty, not hiding it.
