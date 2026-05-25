@@ -60,7 +60,53 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
-## Rule 5. Before writing any UI code, read DESIGN.md in full.
+## Rule 5. Before writing any frontend code, read ARCHITECTURE.md in full.
+All frontend code must strictly adhere to it. Treat these as hard rules — not defaults to override.
+
+Non-negotiables:
+1. Tech stack lock-in: Vue 3 (Composition API + `<script setup lang="ts">`), Vite,
+   Vue Router, Pinia, Axios — and nothing else. No Vuex, no alternative HTTP clients,
+   no React/Svelte patterns, no UI kits not already in package.json. If a need arises
+   that isn't covered, STOP and surface it before installing anything.
+2. Module-first thinking: Before creating any file, name the target
+   `views/[module_name]/`. A new feature = a new module directory. Never spread one
+   feature across multiple modules; never mix two features into one module.
+3. Directory placement is mandatory: Files must land in the exact slots from
+   ARCHITECTURE.md §2. Module-private code lives under
+   `views/[module]/{api,components,hooks,store}/`. Global code lives only under
+   `src/{assets,components,composables,router,store,utils}/`.
+4. API isolation: Never create or grow a global `src/api.ts`. All endpoints declared
+   in `views/[module]/api/index.ts`. A page may only import from its own module's
+   `api/` (or an explicitly designated global service). `src/utils/request.ts` is the
+   only place for the Axios base instance, interceptors, and global error handling.
+5. Routing isolation: Add routes by creating `src/router/modules/[module].ts`. NEVER
+   edit `src/router/index.ts` directly — it auto-aggregates via `import.meta.glob`.
+6. The 3-module rule: Do not promote a component, hook, or store to a global directory
+   unless it is currently consumed by ≥3 separate business modules. When in doubt,
+   keep it local. Premature globalization is a regression.
+7. Destruction safety: After your changes, `rm -rf src/views/[module]` plus deleting
+   the module's route file MUST leave the project compiling with zero errors and zero
+   dead references. If your design fails this test, you have leaked cross-module
+   coupling — refactor before reporting done.
+8. Logic/UI separation: Stateful logic, side effects, and non-trivial computation
+   belong in composables under the module's `hooks/`. `.vue` files = template +
+   minimal glue. No fetch calls or business branching inline in templates.
+9. Component communication: Only `props` down / `emits` up. No cross-module imports
+   of private components, no `provide/inject` across module boundaries, no global
+   event bus, no reaching into another module's store.
+10. TypeScript strictness: Strong types for Axios response schemas, store state,
+    component props and emits. No `any` escape hatches; no `// @ts-ignore` without
+    a one-line justification.
+11. Don't touch global scope unprompted: Unless explicitly told to refactor, do not
+    modify `src/components/`, `src/composables/`, `src/utils/`, `src/store/`,
+    `src/router/index.ts`, or any other module's files.
+
+Before reporting done, output a checklist confirming each rule above. For every file
+created or modified, state: (a) which module it belongs to, (b) which directory slot
+it occupies, (c) whether any file outside that module was touched and why. If any
+rule was bent, flag it explicitly with the reason. Don't hide deviations.
+
+## Rule 6. Before writing any UI code, read DESIGN.md in full.
 All UI must strictly adhere to it. Treat these as hard rules — not defaults to override.
 Non-negotiables:
 1. Reference tokens by name everywhere ({colors.canvas}, {spacing.xl},
@@ -82,39 +128,39 @@ Non-negotiables:
 Before reporting done, output a checklist confirming each rule above.
 If any rule was bent (and why), flag it explicitly. Don't hide deviations.
 
-## Rule 6. Use the model only for judgment calls
+## Rule 7. Use the model only for judgment calls
 Use me for: classification, drafting, summarization, extraction.
 Do NOT use me for: routing, retries, deterministic transforms.
 If code can answer, code answers.
 
-## Rule 7. Token budgets are not advisory
+## Rule 8. Token budgets are not advisory
 Per-task: 4,000 tokens. Per-session: 30,000 tokens.
 If approaching budget, summarize and start fresh.
 Surface the breach. Do not silently overrun.
 
-## Rule 8. Surface conflicts, don't average them
+## Rule 9. Surface conflicts, don't average them
 If two patterns contradict, pick one (more recent / more tested).
 Explain why. Flag the other for cleanup.
 Don't blend conflicting patterns.
 
-## Rule 9. Read before you write
+## Rule 10. Read before you write
 Before adding code, read exports, immediate callers, shared utilities.
 "Looks orthogonal" is dangerous. If unsure why code is structured a way, ask.
 
-## Rule 10. Tests verify intent, not just behavior
+## Rule 11. Tests verify intent, not just behavior
 Tests must encode WHY behavior matters, not just WHAT it does.
 A test that can't fail when business logic changes is wrong.
 
-## Rule 11. Checkpoint after every significant step
+## Rule 12. Checkpoint after every significant step
 Summarize what was done, what's verified, what's left.
 Don't continue from a state you can't describe back.
 If you lose track, stop and restate.
 
-## Rule 12. Match the codebase's conventions, even if you disagree
+## Rule 13. Match the codebase's conventions, even if you disagree
 Conformance > taste inside the codebase.
 If you genuinely think a convention is harmful, surface it. Don't fork silently.
 
-## Rule 13. Fail loud
+## Rule 14. Fail loud
 "Completed" is wrong if anything was skipped silently.
 "Tests pass" is wrong if any were skipped.
 Default to surfacing uncertainty, not hiding it.
