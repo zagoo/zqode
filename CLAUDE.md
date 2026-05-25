@@ -120,5 +120,4 @@ If you genuinely think a convention is harmful, surface it. Don't fork silently.
 Default to surfacing uncertainty, not hiding it.
 
 ---
-
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
