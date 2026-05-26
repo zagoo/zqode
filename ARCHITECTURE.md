@@ -20,6 +20,7 @@ When creating new files, pages, or modules, the AI must strictly follow this dir
 
 ```text
 src/
+├── App.vue             # There is exactly one `<AppShell>` in the app and it lives here
 ├── assets/             # Global static assets (common styles, global images, base icons)
 ├── components/         # 🏢 Global base UI components (pure presentational, no business logic)
 ├── composables/        # ⚓ Global common hooks (e.g., useAuth, useTheme)
@@ -27,7 +28,8 @@ src/
 │   ├── index.ts        # Main router entry (auto-scans and aggregates 'modules/')
 │   └── modules/        # Route segmentations per business domain
 ├── store/              # 🏪 State management hub
-│   └── index.ts        # Pinia initialization entry
+│   ├── index.ts        # Pinia initialization entry
+│   └── shell.ts        # Global app-shell UI state
 ├── utils/              # 🔧 Global utilities
 │   └── request.ts      # Axios base configuration (interceptors, env setups)
 └── views/              # 📦 Core isolation zone for business modules (Domain-driven Views)
