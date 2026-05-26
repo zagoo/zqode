@@ -134,6 +134,7 @@ This rule governs STRUCTURE and COMPONENT COMPOSITION only — visual tokens (co
 App-shell structure (non-negotiable):
 1. Three-pane shell: left nav (~256px) | center content (fluid) | right config
    panel (~360px). Left and right panels collapse independently; center reflows.
+   Keep the left nav and right config panel fixed while the Center pane scrolls.
    There is NO top app bar spanning the panes.
 2. Routing changes the center pane only. Pages never render their own shell.
 3. Build one `<AppShell>` with named slots: `nav-header`, `nav-primary`,
@@ -143,6 +144,7 @@ App-shell structure (non-negotiable):
 Left sidebar (non-negotiable):
 4. Top → bottom order: product header (name + workspace switcher) → primary nav
    → spacer → utility links (e.g.,Search, What's new, Settings, etc.) → user identity chip.
+   dynamically size the middle spacer to fit the viewport height, keeping the header and footer fully visible.
 5. Primary nav rows are icon + label. Parents expand INLINE to reveal children
    — no flyouts, no separate routes for hub pages. Selected state is a soft
    rounded fill on the row, never a side border.
@@ -156,12 +158,12 @@ Center pane (non-negotiable):
 8. Card grids: 3 cols at desktop, 2 at tablet, 1 at mobile. Each card composes:
    tinted square icon (~32px) top-left → title → description. Use card surface
    tokens from DESIGN.md.
-9. The Center panel dynamically renders the actual content of the corresponding page 
+9. The Center pane dynamically renders the actual content of the corresponding page 
    according to the item clicked in the Primary Navigation area on the Left sidebar.
 
 Right configuration panel (non-negotiable):
 10. Header: panel title + utility actions + close (×), the height is exactly the same as 
-    that of the toolbar on the Center panel.
+    that of the toolbar on the Center pane.
 11. Body is a vertical stack of collapsible labeled sections. Inside a section:
     label above the control, control fills width, toggle rows have the label
     filling the row and the switch right-aligned.
