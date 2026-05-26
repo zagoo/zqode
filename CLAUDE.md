@@ -160,7 +160,8 @@ Center pane (non-negotiable):
    according to the item clicked in the Primary Navigation area on the Left sidebar.
 
 Right configuration panel (non-negotiable):
-10. Header: panel title + utility actions + close (×).
+10. Header: panel title + utility actions + close (×), the height is exactly the same as 
+    that of the toolbar on the Center panel.
 11. Body is a vertical stack of collapsible labeled sections. Inside a section:
     label above the control, control fills width, toggle rows have the label
     filling the row and the switch right-aligned.
