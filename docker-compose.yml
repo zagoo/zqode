@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: zqode-postgres
+    environment:
+      POSTGRES_USER: zqode
+      POSTGRES_PASSWORD: zqode_dev
+      POSTGRES_DB: zqode
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zqode"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: zqode-backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://zqode:zqode_dev@postgres:5432/zqode
+      JWT_SECRET_KEY: dev_change_me_in_production_please_use_long_secret
+      ACCESS_TOKEN_EXPIRE_MINUTES: "15"
+      REFRESH_TOKEN_EXPIRE_DAYS: "14"
+      ALLOWED_EMAIL_DOMAINS: example.com,company.com
+      INITIAL_ADMIN_ENTERPRISE_EMAIL: admin@example.com
+      DEFAULT_CURRENCY: USD
+      EMAIL_MODE: console
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: zqode-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      VITE_API_BASE: /api
+    depends_on:
+      - backend
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+volumes:
+  postgres_data:

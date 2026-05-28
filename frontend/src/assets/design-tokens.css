@@ -1,0 +1,58 @@
+/* Anthropic-inspired design tokens, per DESIGN.md. Reference by name only. */
+
+:root {
+  /* colors */
+  --c-primary: #cc785c;
+  --c-primary-active: #a9583e;
+  --c-primary-disabled: #e6dfd8;
+  --c-ink: #141413;
+  --c-body: #3d3d3a;
+  --c-body-strong: #252523;
+  --c-muted: #6c6a64;
+  --c-muted-soft: #8e8b82;
+  --c-hairline: #e6dfd8;
+  --c-hairline-soft: #ebe6df;
+  --c-canvas: #faf9f5;
+  --c-surface-soft: #f5f0e8;
+  --c-surface-card: #efe9de;
+  --c-surface-cream-strong: #e8e0d2;
+  --c-surface-dark: #181715;
+  --c-surface-dark-elevated: #252320;
+  --c-surface-dark-soft: #1f1e1b;
+  --c-on-primary: #ffffff;
+  --c-on-dark: #faf9f5;
+  --c-on-dark-soft: #a09d96;
+  --c-accent-teal: #5db8a6;
+  --c-accent-amber: #e8a55a;
+  --c-success: #5db872;
+  --c-warning: #d4a017;
+  --c-error: #c64545;
+
+  /* type stacks (free-font substitutes per DESIGN.md "Known Gaps") */
+  --f-display: 'EB Garamond', 'Cormorant Garamond', 'Tiempos Headline', Garamond, 'Times New Roman', serif;
+  --f-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* spacing */
+  --s-xxs: 4px;
+  --s-xs: 8px;
+  --s-sm: 12px;
+  --s-md: 16px;
+  --s-lg: 24px;
+  --s-xl: 32px;
+  --s-xxl: 48px;
+  --s-section: 96px;
+
+  /* radii */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-pill: 9999px;
+
+  /* shell */
+  --shell-nav-w: 256px;
+  --shell-panel-w: 360px;
+  --shell-toolbar-h: 56px;
+}
