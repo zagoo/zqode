@@ -3,6 +3,7 @@
 These endpoints sit outside the platform envelope: success returns provider-native
 bodies so OpenAI/Anthropic clients keep working unchanged.
 """
+
 from __future__ import annotations
 
 import logging
@@ -61,7 +62,9 @@ async def _authenticate_api_key(db, raw_secret: str) -> tuple[APIKey, User]:
 
     user = (
         await db.execute(
-            select(User).where(User.user_id == key.owner_user_id).options(selectinload(User.role).selectinload(Role.permissions))
+            select(User)
+            .where(User.user_id == key.owner_user_id)
+            .options(selectinload(User.role).selectinload(Role.permissions))
         )
     ).scalar_one_or_none()
     if not user:
@@ -71,10 +74,25 @@ async def _authenticate_api_key(db, raw_secret: str) -> tuple[APIKey, User]:
     return key, user
 
 
-async def _resolve_openapi(db, openapi_id_value: str) -> EnterpriseOpenAPI:
+async def _resolve_openapi(
+    db, openapi_id_value: str, full_path: str | None = None
+) -> EnterpriseOpenAPI:
     o = (
-        await db.execute(select(EnterpriseOpenAPI).where(EnterpriseOpenAPI.openapi_id == openapi_id_value))
+        await db.execute(
+            select(EnterpriseOpenAPI).where(
+                EnterpriseOpenAPI.openapi_id == openapi_id_value
+            )
+        )
     ).scalar_one_or_none()
+    if not o and full_path:
+        # fallback: match by gateway_url so human-readable slugs work as real endpoints
+        o = (
+            await db.execute(
+                select(EnterpriseOpenAPI).where(
+                    EnterpriseOpenAPI.gateway_url == full_path
+                )
+            )
+        ).scalar_one_or_none()
     if not o or o.status != "ACTIVE":
         raise errors.not_found("Gateway endpoint not configured.")
     return o
@@ -82,10 +100,16 @@ async def _resolve_openapi(db, openapi_id_value: str) -> EnterpriseOpenAPI:
 
 async def _resolve_model(db, model_name: str) -> Model:
     m = (
-        await db.execute(
-            select(Model).where(Model.model_name == model_name, Model.status == "ACTIVE").options(selectinload(Model.provider))
+        (
+            await db.execute(
+                select(Model)
+                .where(Model.model_name == model_name, Model.status == "ACTIVE")
+                .options(selectinload(Model.provider))
+            )
         )
-    ).scalar_one_or_none()
+        .scalars()
+        .first()
+    )
     if not m:
         raise errors.model_not_found()
     if not m.provider or m.provider.status != "ACTIVE":
@@ -93,11 +117,17 @@ async def _resolve_model(db, model_name: str) -> Model:
     return m
 
 
-def _compute_costs(input_tokens: int, output_tokens: int, model: Model) -> tuple[Decimal, Decimal, Decimal]:
+def _compute_costs(
+    input_tokens: int, output_tokens: int, model: Model
+) -> tuple[Decimal, Decimal, Decimal]:
     million = Decimal("1000000")
     inp = (Decimal(input_tokens) / million) * model.input_price_per_million_tokens
     out = (Decimal(output_tokens) / million) * model.output_price_per_million_tokens
-    return inp.quantize(Decimal("0.000001")), out.quantize(Decimal("0.000001")), (inp + out).quantize(Decimal("0.000001"))
+    return (
+        inp.quantize(Decimal("0.000001")),
+        out.quantize(Decimal("0.000001")),
+        (inp + out).quantize(Decimal("0.000001")),
+    )
 
 
 async def _process_gateway(
@@ -148,12 +178,16 @@ async def _process_gateway(
             provider_response, http_status = await provider_svc.forward_openai(
                 model.provider.api_base_url, model.provider.api_key_ciphertext, payload
             )
-            input_tokens, output_tokens = provider_svc.extract_usage_openai(provider_response)
+            input_tokens, output_tokens = provider_svc.extract_usage_openai(
+                provider_response
+            )
         else:
             provider_response, http_status = await provider_svc.forward_anthropic(
                 model.provider.api_base_url, model.provider.api_key_ciphertext, payload
             )
-            input_tokens, output_tokens = provider_svc.extract_usage_anthropic(provider_response)
+            input_tokens, output_tokens = provider_svc.extract_usage_anthropic(
+                provider_response
+            )
     except Exception as exc:
         usage_log.request_status = "FAILED"
         usage_log.error_code = "PROVIDER_REQUEST_FAILED"
@@ -163,8 +197,16 @@ async def _process_gateway(
 
     completed = datetime.now(timezone.utc)
     if http_status >= 400 or input_tokens is None or output_tokens is None:
-        usage_log.request_status = "COST_FAILED" if (input_tokens is None or output_tokens is None) else "FAILED"
-        usage_log.error_code = "TOKEN_USAGE_MISSING" if (input_tokens is None or output_tokens is None) else f"HTTP_{http_status}"
+        usage_log.request_status = (
+            "COST_FAILED"
+            if (input_tokens is None or output_tokens is None)
+            else "FAILED"
+        )
+        usage_log.error_code = (
+            "TOKEN_USAGE_MISSING"
+            if (input_tokens is None or output_tokens is None)
+            else f"HTTP_{http_status}"
+        )
         usage_log.response_content = provider_response
         usage_log.provider_completed_at = completed
         usage_log.latency_ms = int((completed - started).total_seconds() * 1000)
@@ -173,7 +215,9 @@ async def _process_gateway(
             raise errors.token_usage_missing()
         raise errors.provider_request_failed(f"upstream status {http_status}")
 
-    input_cost, output_cost, total_cost = _compute_costs(input_tokens, output_tokens, model)
+    input_cost, output_cost, total_cost = _compute_costs(
+        input_tokens, output_tokens, model
+    )
 
     # transactional cost deduction + outbox
     usage_log.request_status = "SUCCESS"
@@ -244,12 +288,13 @@ async def _process_gateway(
 async def openai_chat_completions(
     openapi_id: Annotated[str, Path()],
     payload: Annotated[dict[str, Any], Body()],
+    request: Request,
     db: DBSession,
     authorization: Annotated[str | None, Header()] = None,
     x_api_key: Annotated[str | None, Header(alias="x-api-key")] = None,
 ):
     raw = _extract_api_key(authorization, x_api_key)
-    openapi = await _resolve_openapi(db, openapi_id)
+    openapi = await _resolve_openapi(db, openapi_id, request.url.path)
     if openapi.api_type != "OPENAI_COMPATIBLE":
         raise errors.validation_error("Endpoint is not OpenAI-compatible.")
     return await _process_gateway(db, openapi, payload, raw)
@@ -263,12 +308,13 @@ async def openai_chat_completions(
 async def anthropic_messages(
     openapi_id: Annotated[str, Path()],
     payload: Annotated[dict[str, Any], Body()],
+    request: Request,
     db: DBSession,
     authorization: Annotated[str | None, Header()] = None,
     x_api_key: Annotated[str | None, Header(alias="x-api-key")] = None,
 ):
     raw = _extract_api_key(authorization, x_api_key)
-    openapi = await _resolve_openapi(db, openapi_id)
+    openapi = await _resolve_openapi(db, openapi_id, request.url.path)
     if openapi.api_type != "ANTHROPIC_COMPATIBLE":
         raise errors.validation_error("Endpoint is not Anthropic-compatible.")
     return await _process_gateway(db, openapi, payload, raw)
