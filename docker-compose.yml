@@ -25,8 +25,8 @@ services:
       JWT_SECRET_KEY: dev_change_me_in_production_please_use_long_secret
       ACCESS_TOKEN_EXPIRE_MINUTES: "15"
       REFRESH_TOKEN_EXPIRE_DAYS: "14"
-      ALLOWED_EMAIL_DOMAINS: example.com,company.com
-      INITIAL_ADMIN_ENTERPRISE_EMAIL: admin@example.com
+      ALLOWED_EMAIL_DOMAINS: engineai.com.cn
+      INITIAL_ADMIN_ENTERPRISE_EMAIL: rensb@engineai.com.cn
       DEFAULT_CURRENCY: USD
       EMAIL_MODE: console
     depends_on:

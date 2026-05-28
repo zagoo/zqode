@@ -13,8 +13,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 14
 
-    ALLOWED_EMAIL_DOMAINS: str = "example.com"
-    INITIAL_ADMIN_ENTERPRISE_EMAIL: str = "admin@example.com"
+    ALLOWED_EMAIL_DOMAINS: str = "engineai.com.cn"
+    INITIAL_ADMIN_ENTERPRISE_EMAIL: str = "rensb@engineai.com.cn"
 
     DEFAULT_CURRENCY: str = "USD"
     LOGIN_CHALLENGE_EXPIRE_MINUTES: int = 5
@@ -26,7 +26,11 @@ class Settings(BaseSettings):
 
     @property
     def allowed_domains(self) -> List[str]:
-        return [d.strip().lower() for d in self.ALLOWED_EMAIL_DOMAINS.split(",") if d.strip()]
+        return [
+            d.strip().lower()
+            for d in self.ALLOWED_EMAIL_DOMAINS.split(",")
+            if d.strip()
+        ]
 
 
 @lru_cache
