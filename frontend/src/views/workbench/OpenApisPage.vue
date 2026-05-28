@@ -7,7 +7,27 @@ const apis = ref<WorkbenchOpenAPIOut[]>([]);
 const loading = ref(true);
 
 function copy(text: string) {
-    navigator.clipboard.writeText(text).catch(() => {});
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+    } else {
+        fallbackCopy(text);
+    }
+}
+
+function fallbackCopy(text: string) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+        document.execCommand("copy");
+    } catch (err) {
+        console.error("Fallback copy failed:", err);
+    }
+    document.body.removeChild(textArea);
 }
 
 onMounted(async () => {
