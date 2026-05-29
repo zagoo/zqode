@@ -85,3 +85,7 @@ def provider_request_failed(message: str = "Provider request failed.") -> BizErr
 
 def token_usage_missing() -> BizError:
     return BizError(status.HTTP_502_BAD_GATEWAY, "TOKEN_USAGE_MISSING", "Provider response did not include token usage.")
+
+
+def email_delivery_failed() -> BizError:
+    return BizError(status.HTTP_502_BAD_GATEWAY, "EMAIL_DELIVERY_FAILED", "Could not send the login code. Please try again.")

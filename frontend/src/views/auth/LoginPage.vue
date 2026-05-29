@@ -13,7 +13,6 @@ const enterpriseEmail = ref('');
 const challengeId = ref<string | null>(null);
 const expiresAt = ref<string | null>(null);
 const password = ref('');
-const devPassword = ref<string | null>(null);
 const error = ref<string | null>(null);
 const submitting = ref(false);
 const emailMask = ref('');
@@ -28,7 +27,6 @@ async function sendChallenge() {
     challengeId.value = data.challenge_id;
     expiresAt.value = data.expires_at;
     emailMask.value = data.enterprise_email_mask;
-    devPassword.value = data.dev_random_password ?? null;
     step.value = 'code';
   } catch (e: any) {
     error.value = e.message || 'Could not send a login code.';
@@ -90,9 +88,6 @@ function back() {
         <p class="check-line">
           Code sent to <span class="mono">{{ emailMask }}</span>.
         </p>
-        <div v-if="devPassword" class="dev-hint">
-          Dev mode — code is <span class="mono">{{ devPassword }}</span>
-        </div>
         <div class="form-row">
           <label for="code">Random password</label>
           <input id="code" v-model="password" type="text" inputmode="numeric" placeholder="6-digit code" autocomplete="one-time-code" />
@@ -161,15 +156,6 @@ function back() {
   font-size: 14px;
 }
 .check-line { font-size: 14px; color: var(--c-body); margin: 0 0 var(--s-md); }
-.dev-hint {
-  background: var(--c-surface-soft);
-  border: 1px dashed var(--c-hairline);
-  border-radius: var(--r-md);
-  padding: 8px 12px;
-  font-size: 12px;
-  color: var(--c-muted);
-  margin-bottom: var(--s-md);
-}
 .art {
   background: var(--c-surface-dark);
   color: var(--c-on-dark);

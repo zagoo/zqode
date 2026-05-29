@@ -1,0 +1,96 @@
+# Production ("online formal") stack — single host.
+#
+#   cp .env.example .env.prod          # then fill in real secrets
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# Differences from the dev docker-compose.yml: no source bind-mounts, no
+# --reload, multiple uvicorn workers, the SPA is built and served by nginx
+# (which proxies /api), Postgres/backend are not published to the host, and
+# every secret comes from .env.prod (missing required ones fail loud).
+
+# Shared backend settings. Required secrets use ${VAR:?...} so compose aborts
+# with a clear message instead of silently using the insecure dev defaults.
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-zqode}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.prod}@postgres:5432/${POSTGRES_DB:-zqode}
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env.prod to a long random secret}
+  ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+  REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-14}
+  ALLOWED_EMAIL_DOMAINS: ${ALLOWED_EMAIL_DOMAINS:?Set ALLOWED_EMAIL_DOMAINS in .env.prod}
+  INITIAL_ADMIN_ENTERPRISE_EMAIL: ${INITIAL_ADMIN_ENTERPRISE_EMAIL:?Set INITIAL_ADMIN_ENTERPRISE_EMAIL in .env.prod}
+  DEFAULT_CURRENCY: ${DEFAULT_CURRENCY:-USD}
+  EMAIL_MODE: ${EMAIL_MODE:-console}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: zqode-postgres-prod
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-zqode}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.prod}
+      POSTGRES_DB: ${POSTGRES_DB:-zqode}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zqode}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    # No host port: Postgres is reachable only on the internal compose network.
+
+  # One-shot: apply migrations, then seed roles/permissions/admin ONCE so the
+  # backend workers start against an already-seeded DB. This sidesteps the
+  # multi-worker bootstrap race (each worker's lifespan bootstrap then finds
+  # everything present and writes nothing) without changing app code.
+  migrate:
+    image: zqode-backend:prod
+    container_name: zqode-migrate-prod
+    environment: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head &&
+             python -c 'import asyncio; from app.core.bootstrap import run_bootstrap; asyncio.run(run_bootstrap())'"
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    image: zqode-backend:prod
+    container_name: zqode-backend-prod
+    environment: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000",
+              "--workers", "${UVICORN_WORKERS:-4}", "--proxy-headers",
+              "--forwarded-allow-ips", "*"]
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    # No host port: the backend is reached only through nginx (/api proxy).
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    image: zqode-frontend:prod
+    container_name: zqode-frontend-prod
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

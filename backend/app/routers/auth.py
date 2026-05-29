@@ -1,5 +1,4 @@
 """M01 — Platform Authentication & Login."""
-import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, status
@@ -20,8 +19,8 @@ from app.schemas.auth import (
     UserContext,
 )
 from app.schemas.response import ApiResponse, ok
+from app.services import email as email_svc
 
-log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
@@ -77,12 +76,11 @@ async def create_login_challenge(body: LoginChallengeRequest, db: DBSession) -> 
         expires_at=expires_at,
     )
     db.add(challenge)
+    # Deliver the code before committing: if delivery fails the challenge is
+    # rolled back, so no orphaned PENDING row is left behind.
+    await email_svc.send_login_code(email, password, settings.LOGIN_CHALLENGE_EXPIRE_MINUTES)
     await db.commit()
     await db.refresh(challenge)
-
-    # Console "email delivery"
-    if settings.EMAIL_MODE == "console":
-        log.warning("auth.challenge.email_sent dev_password=%s email=%s", password, email)
 
     return ok(
         LoginChallengeResponse(

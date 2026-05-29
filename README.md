@@ -23,9 +23,49 @@ the three built-in roles (System Administrator, Team Manager, Normal User),
 and the initial admin user from `INITIAL_ADMIN_ENTERPRISE_EMAIL`
 (default `admin@example.com`).
 
-`EMAIL_MODE=console` (default) prints the random login password to the backend
-container logs so you can sign in without an SMTP server. Switch to a real
-SMTP relay in production.
+`EMAIL_MODE=console` (default) prints the random login code to the backend
+container logs so you can sign in without an SMTP server. Set `EMAIL_MODE=smtp`
+with the `SMTP_*` settings to email the code to users in production.
+
+## Production deployment (online formal mode)
+
+`docker-compose.yml` is **developer mode** (Vite dev server, `uvicorn --reload`,
+bind-mounted source, hardcoded dev secrets). For a single-host production
+("online formal") deployment use `docker-compose.prod.yml`:
+
+```bash
+cp .env.example .env.prod          # then fill in the CHANGE_ME secrets
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
+
+The frontend is then served at `http://<host>:${HTTP_PORT:-80}`.
+
+How it differs from dev mode:
+
+| | Dev (`docker-compose.yml`) | Prod (`docker-compose.prod.yml`) |
+|---|---|---|
+| Frontend | Vite dev server `:5173`, source mounted, HMR | `npm run build` → static assets served by **nginx**, which reverse-proxies `/api` → backend |
+| Backend | `uvicorn --reload`, 1 worker, source mounted | `uvicorn --workers ${UVICORN_WORKERS}`, no reload, code baked into the image, runs as non-root |
+| Migrations / seed | run inline on every start | a one-shot `migrate` service runs `alembic upgrade head` then seeds **once**, before workers start |
+| Secrets | hardcoded in the compose file | required via `.env.prod`; a missing `JWT_SECRET_KEY` / `POSTGRES_PASSWORD` aborts startup |
+| Exposure | Postgres + backend published to host | only nginx (`:80`) is published; Postgres + backend stay on the internal network |
+
+The SPA calls the API with relative paths, so nginx serving the SPA and
+proxying `/api` keeps everything same-origin (no CORS). Because the backend is
+no longer published to the host, FastAPI's `/docs` and `/openapi.json` are
+reachable only from inside the compose network — regenerate the typed client
+(`npm run openapi:gen`) against the **dev** stack.
+
+### Before going live — known gaps
+
+- **Login codes are emailed when `EMAIL_MODE=smtp`** (configure the `SMTP_*`
+  settings). In the default `console` mode the code is written to the backend
+  logs instead of being emailed.
+- **Provider API keys are not encrypted at rest** (`api_key_ciphertext` stores
+  plaintext today — see "Known scope-limits"). Add a KMS/libsodium box first.
+- **TLS is not included.** Terminate HTTPS at an upstream load balancer, or add
+  a TLS-terminating reverse proxy (e.g. Caddy/Traefik) in front of nginx and
+  map `:443`.
 
 ## End-to-end smoke test (no Postgres needed)
 
@@ -39,6 +79,13 @@ python3.12 -m venv .venv
 Exercises auth, admin CRUD, workbench API-key creation, a mock-provider
 gateway call, analytics, and a couple of negative paths. ~30 HTTP requests,
 runs in under a second against in-memory SQLite.
+
+The login-code email sender has a focused unit test that needs no dependencies
+(stdlib only — it stubs config/errors and a fake SMTP server):
+
+```bash
+cd backend && python3 tests/test_email.py
+```
 
 ## Architecture
 
@@ -126,7 +173,11 @@ counts) so cost calculation, quota deduction, and analytics work end-to-end.
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `14` | |
 | `ALLOWED_EMAIL_DOMAINS` | `example.com` | CSV, lowercased, e.g. `acme.com,partner.com` |
 | `INITIAL_ADMIN_ENTERPRISE_EMAIL` | `admin@example.com` | Bootstrap System Administrator |
-| `EMAIL_MODE` | `console` | Set to `smtp` to wire a real provider later |
+| `EMAIL_MODE` | `console` | `console` logs the code; `smtp` emails it |
+| `SMTP_HOST` / `SMTP_PORT` | _empty_ / `587` | SMTP relay (required when `EMAIL_MODE=smtp`) |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | _empty_ | SMTP auth credentials |
+| `SMTP_FROM` / `SMTP_FROM_NAME` | _empty_ / `ZQode Gateway` | Sender address / display name |
+| `SMTP_STARTTLS` / `SMTP_SSL` | `true` / `false` | `587`+STARTTLS, or `465`+SSL |
 | `LOGIN_CHALLENGE_EXPIRE_MINUTES` | `5` | |
 | `LOGIN_CHALLENGE_MAX_ATTEMPTS` | `5` | |
 | `DEFAULT_CURRENCY` | `USD` | |
