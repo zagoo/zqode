@@ -93,4 +93,8 @@ services:
     restart: unless-stopped
 
 volumes:
+  # Dedicated prod volume with a fixed name so it never collides with the dev
+  # stack's volume (which was initialized with the weak dev password). Postgres
+  # only honors POSTGRES_PASSWORD on the first init of an empty volume.
   postgres_data:
+    name: zqode_prod_postgres_data

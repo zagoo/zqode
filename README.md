@@ -49,12 +49,19 @@ How it differs from dev mode:
 | Migrations / seed | run inline on every start | a one-shot `migrate` service runs `alembic upgrade head` then seeds **once**, before workers start |
 | Secrets | hardcoded in the compose file | required via `.env.prod`; a missing `JWT_SECRET_KEY` / `POSTGRES_PASSWORD` aborts startup |
 | Exposure | Postgres + backend published to host | only nginx (`:80`) is published; Postgres + backend stay on the internal network |
+| Database volume | `postgres_data` (named by project) | dedicated `zqode_prod_postgres_data` — never shares data or the dev password |
 
 The SPA calls the API with relative paths, so nginx serving the SPA and
 proxying `/api` keeps everything same-origin (no CORS). Because the backend is
 no longer published to the host, FastAPI's `/docs` and `/openapi.json` are
 reachable only from inside the compose network — regenerate the typed client
 (`npm run openapi:gen`) against the **dev** stack.
+
+Production uses its own dedicated Postgres volume (`zqode_prod_postgres_data`),
+so it never shares data — or the weak dev password — with the dev stack. Note
+that Postgres only applies `POSTGRES_PASSWORD` when it first initializes an empty
+volume: to rotate the password later, change it inside the database
+(`ALTER USER zqode WITH PASSWORD …`) rather than just editing `.env.prod`.
 
 ### Before going live — known gaps
 
