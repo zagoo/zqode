@@ -6,7 +6,8 @@ import { workbenchApi } from "./api";
 const apis = ref<WorkbenchOpenAPIOut[]>([]);
 const loading = ref(true);
 
-function copy(text: string) {
+function copy(text: string | null | undefined) {
+    if (!text) return;
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
     } else {

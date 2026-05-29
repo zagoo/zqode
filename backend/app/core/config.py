@@ -21,8 +21,19 @@ class Settings(BaseSettings):
     LOGIN_CHALLENGE_MAX_ATTEMPTS: int = 5
     API_KEY_SECRET_TTL_SECONDS: int = 300
 
-    # console = print code to stdout; smtp would dispatch real email
+    # console = log the code to the backend logs (dev); smtp = deliver via email
     EMAIL_MODE: str = "console"
+
+    # SMTP delivery — used when EMAIL_MODE=smtp
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+    SMTP_FROM_NAME: str = "ZQode Gateway"
+    SMTP_STARTTLS: bool = True
+    SMTP_SSL: bool = False
+    SMTP_TIMEOUT_SECONDS: int = 15
 
     @property
     def allowed_domains(self) -> List[str]:

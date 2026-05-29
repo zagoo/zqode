@@ -1,0 +1,20 @@
+# Production image for the ZQode frontend: build the Vue SPA to static
+# assets, then serve them with nginx (which also reverse-proxies /api).
+# Dev builds keep using ./Dockerfile (Vite dev server with HMR).
+
+# ---- build stage ----
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci
+COPY . .
+# `npm run build` = vue-tsc -b && vite build. A type error fails the build
+# on purpose — do not suppress it.
+RUN npm run build
+
+# ---- runtime stage ----
+FROM nginx:1.27-alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
