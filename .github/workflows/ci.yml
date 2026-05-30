@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  nginx-config:
+    name: Validate prod nginx config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Lint frontend/nginx.conf with `nginx -t`, mounted exactly where the
+      # prod image puts it (Dockerfile.prod: COPY nginx.conf
+      # /etc/nginx/conf.d/default.conf), using the same nginx image tag — so a
+      # syntax error in the prod reverse-proxy config fails the PR instead of
+      # only surfacing at deploy time.
+      - name: nginx -t (same image as the prod frontend)
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+            nginx:1.27-alpine nginx -t
