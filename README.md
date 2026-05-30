@@ -52,10 +52,11 @@ How it differs from dev mode:
 | Database volume | `postgres_data` (named by project) | dedicated `zqode_prod_postgres_data` — never shares data or the dev password |
 
 The SPA calls the API with relative paths, so nginx serving the SPA and
-proxying `/api` keeps everything same-origin (no CORS). Because the backend is
-no longer published to the host, FastAPI's `/docs` and `/openapi.json` are
-reachable only from inside the compose network — regenerate the typed client
-(`npm run openapi:gen`) against the **dev** stack.
+proxying `/api` keeps everything same-origin (no CORS). nginx also proxies
+`/docs`, `/redoc`, and `/openapi.json` to the backend, so the interactive API
+docs and schema are reachable in production. The backend itself is still not
+published to the host; regenerate the typed client (`npm run openapi:gen`)
+against the **dev** stack.
 
 Production uses its own dedicated Postgres volume (`zqode_prod_postgres_data`),
 so it never shares data — or the weak dev password — with the dev stack. Note
